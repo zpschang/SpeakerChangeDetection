@@ -7,6 +7,8 @@ import os
 import matplotlib.pyplot as plt
 import sys
 
+threshold = 0.75
+
 if len(sys.argv) != 2:
     exit(0)
 cmd = sys.argv[1]
@@ -40,8 +42,9 @@ change_list = []
 identical_list = []
 time_list = []
 distance_list = []
-total = 0
-correct = 0
+change = total = 0
+total_truth = total_predict = 0
+correct_truth = correct_predict = 0
 if not is_cut:
     while reader_test.epoch < 1:
         batch = reader_test.get_batch()
@@ -57,10 +60,16 @@ if not is_cut:
             total += 1
             if speaker != prev_speaker:
                 change_list.append(d)
-                correct += 1 if d >= 0.5 else 0
+                change += 1
+                total_truth += 1
+                correct_truth += 1 if d >= threshold else 0
             else:
                 identical_list.append(d)
-                correct += 1 if d < 0.5 else 0
+
+            if d >= threshold:
+                total_predict += 1
+                correct_predict += 1 if speaker != prev_speaker else 0
+
         argmax = np.argmax(result)
         file_output.write('time: %f ' % (reader_test.iter * parameter.block_ms / 1000))
         # file_output.write('max: %s, p = %f\n' % (reader_test.speaker[argmax], result[argmax]))
@@ -69,8 +78,9 @@ if not is_cut:
 
     print 'change:', 0 if len(change_list) == 0 else sum(change_list) / len(change_list)
     print 'identical:', sum(identical_list) / len(identical_list)
-    print 'total segmentation accuracy:', 1.0 * correct / total
-
+    print 'predict accuracy:', 1.0 * correct_predict / total_predict
+    print 'recall accuracy:', 1.0 * correct_truth / total_truth
+    print 'change prob:', 1.0 * change / total
     plt.hist(change_list, bins=14, range=(0,1.4), normed=1, color=(1,0,0,0.5))
     plt.hist(identical_list, bins=14, range=(0, 1.4), normed=1, color=(0,1,0,0.5))
     plt.savefig('identical.png')
@@ -87,11 +97,15 @@ if not is_cut:
 else:
     while reader_test.epoch < 1:
         batch = reader_test.get_batch()
+        feature, speaker = batch
         result = model.evaluate(sess, batch)
         result = result[0]
         if not prev_result is None:
             d = distance(result, prev_result)
-            if d > 0.5:
-                file_output.write('time: %f, speaker change\n' % (reader_test.iter * parameter.block_ms / 1000))
+            if d > threshold:
+                file_output.write('time: %fs, speaker change\n' % (reader_test.iter * parameter.block_ms / 1000))
+            if prev_speaker != speaker:
+                file_output.write('time: %fs, ground truth speaker change\n' % (reader_test.iter * parameter.block_ms / 1000))
+        prev_speaker = speaker
         prev_result = result
     print 'infer end'

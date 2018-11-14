@@ -4,7 +4,7 @@ class Parameter():
         self.is_mlp = True
         self.block_size = 10
         self.feature_length = 200
-        self.speaker_num = 109
+        self.speaker_num = 107
         self.learning_rate = 0.001
         self.lstm_size = 50
         self.num_layer = 3

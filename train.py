@@ -7,11 +7,14 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
 
 reader = Reader()
 model = SpeakerClassifier()
-sess = tf.Session()
+sess = tf.Session(config=config)
 saver = tf.train.Saver(tf.global_variables(), keep_checkpoint_every_n_hours=1.0)
 
 try:
